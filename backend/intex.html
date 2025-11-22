@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crypto Trade Client</title>
+    <!-- Підключаємо Bootstrap для краси -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #f8f9fa; }
+        .card { box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        #app-section { display: none; } /* Ховаємо додаток до логіну */
+        .loading { opacity: 0.5; pointer-events: none; }
+    </style>
+</head>
+<body>
+
+    <!-- НАВІГАЦІЯ -->
+    <nav class="navbar navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="#">🚀 CryptoExchange</a>
+            <div id="user-info" class="d-flex align-items-center text-white" style="display: none !important;">
+                <span id="username-display" class="me-3 fw-bold"></span>
+                <button onclick="logout()" class="btn btn-sm btn-light text-primary">Вийти</button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-5">
+        
+        <!-- ЕКРАН ЛОГІНУ -->
+        <div id="login-section" class="row justify-content-center">
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-body">
+                        <h4 class="card-title text-center mb-4">Вхід</h4>
+                        <div class="mb-3">
+                            <label class="form-label">User ID</label>
+                            <input type="number" id="userIdInput" class="form-control" placeholder="Напр. 1" value="1">
+                        </div>
+                        <button onclick="login()" class="btn btn-primary w-100">Увійти</button>
+                        <div id="login-error" class="text-danger mt-2 text-center small"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ОСНОВНИЙ ЕКРАН (прихований до входу) -->
+        <div id="app-section">
+            
+            <!-- Статистика -->
+            <div class="row mb-4">
+                <div class="col-md-12">
+                    <div class="alert alert-info d-flex justify-content-between align-items-center">
+                        <span>👋 Привіт! Твій ID гаманця: <b id="wallet-id-display">...</b></span>
+                        <span>Всього трейдів: <b id="trade-count-display">0</b></span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <!-- Форма створення трейду -->
+                <div class="col-md-4 mb-4">
+                    <div class="card">
+                        <div class="card-header bg-success text-white">Новий трейд</div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <label class="form-label">Криптовалюта</label>
+                                <select id="cryptoSelect" class="form-select">
+                                    <option selected disabled>Завантаження...</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Кількість</label>
+                                <input type="number" id="quantityInput" class="form-control" step="0.01" placeholder="0.00">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Тип операції</label>
+                                <select id="typeSelect" class="form-select">
+                                    <option value="Buy">🟢 Купити (Buy)</option>
+                                    <option value="Sell">🔴 Продати (Sell)</option>
+                                </select>
+                            </div>
+                            <button onclick="createTrade()" class="btn btn-success w-100">Створити ордер</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Таблиця Моїх Трейдів -->
+                <div class="col-md-8">
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <span>Історія операцій</span>
+                            <button onclick="loadMyTrades()" class="btn btn-sm btn-outline-secondary">🔄 Оновити</button>
+                        </div>
+                        <div class="card-body p-0">
+                            <table class="table table-striped table-hover mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Дата</th>
+                                        <th>Тип</th>
+                                        <th>Крипта</th>
+                                        <th>Кількість</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tradesTableBody">
+                                    <!-- Сюди JS додасть рядки -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Таблиця курсів валют (Додатково) -->
+            <div class="row mt-4">
+                <div class="col-12">
+                    <h5>💰 Доступні криптовалюти</h5>
+                    <div id="crypto-badges" class="d-flex gap-2 flex-wrap">
+                        <!-- Сюди JS додасть бейджі -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- СКРИПТИ -->
+    <script>
+        const API_URL = "http://127.0.0.1:8000"; // Адреса твого бекенду
+        
+        // При завантаженні перевіряємо, чи ми вже залогінені
+        document.addEventListener("DOMContentLoaded", () => {
+            const token = localStorage.getItem("accessToken");
+            if (token) {
+                showApp();
+            }
+        });
+
+        // --- АВТОРИЗАЦІЯ ---
+
+        async function login() {
+            const userId = document.getElementById("userIdInput").value;
+            const errorDiv = document.getElementById("login-error");
+            errorDiv.innerText = "";
+
+            try {
+                const response = await fetch(`${API_URL}/auth/login`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ user_id: parseInt(userId) })
+                });
+
+                if (!response.ok) throw new Error("Користувача не знайдено");
+
+                const data = await response.json();
+                // Зберігаємо токен у браузері
+                localStorage.setItem("accessToken", data.access_token);
+                showApp();
+
+            } catch (err) {
+                errorDiv.innerText = err.message;
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem("accessToken");
+            document.getElementById("login-section").style.display = "flex";
+            document.getElementById("app-section").style.display = "none";
+            document.getElementById("user-info").style.setProperty("display", "none", "important");
+        }
+
+        function showApp() {
+            document.getElementById("login-section").style.display = "none";
+            document.getElementById("app-section").style.display = "block";
+            document.getElementById("user-info").style.setProperty("display", "flex", "important");
+            
+            // Завантажуємо дані
+            loadCryptos();
+            loadMyTrades();
+            loadStats();
+        }
+
+        // --- ЗАПИТИ ДО API ---
+
+        // Функція-обгортка для додавання Токена до кожного запиту
+        async function authFetch(endpoint, options = {}) {
+            const token = localStorage.getItem("accessToken");
+            const headers = {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}`,
+                ...options.headers
+            };
+            
+            const response = await fetch(`${API_URL}${endpoint}`, { ...options, headers });
+            
+            if (response.status === 401) {
+                alert("Сесія вичерпана. Будь ласка, увійдіть знову.");
+                logout();
+                return null;
+            }
+            return response;
+        }
+
+        async function loadCryptos() {
+            const res = await authFetch("/api/cryptos");
+            if (!res) return;
+            const cryptos = await res.json();
+
+            const select = document.getElementById("cryptoSelect");
+            const badges = document.getElementById("crypto-badges");
+            
+            select.innerHTML = "";
+            badges.innerHTML = "";
+
+            cryptos.forEach(c => {
+                // Додаємо в селект
+                const opt = document.createElement("option");
+                opt.value = c.crypto_id;
+                opt.innerText = `${c.name} (${c.symbol}) - $${c.price_usd}`;
+                select.appendChild(opt);
+
+                // Додаємо красивий бейдж знизу
+                const badge = document.createElement("span");
+                badge.className = "badge bg-secondary p-2";
+                badge.innerText = `${c.name}: $${c.price_usd}`;
+                badges.appendChild(badge);
+            });
+        }
+
+        async function loadMyTrades() {
+            const res = await authFetch("/api/my-trades");
+            if (!res) return;
+            const trades = await res.json();
+
+            const tbody = document.getElementById("tradesTableBody");
+            tbody.innerHTML = "";
+
+            if (trades.length === 0) {
+                tbody.innerHTML = "<tr><td colspan='5' class='text-center'>Історія порожня</td></tr>";
+                return;
+            }
+
+            trades.forEach(t => {
+                const row = `
+                    <tr>
+                        <td>${t.trade_id}</td>
+                        <td>${t.trade_date}</td>
+                        <td>
+                            <span class="badge ${t.trade_type === 'Buy' ? 'bg-success' : 'bg-danger'}">
+                                ${t.trade_type}
+                            </span>
+                        </td>
+                        <td>${t.crypto_name || ('ID: ' + t.crypto_id)}</td>
+                        <td>${t.quantity}</td>
+                    </tr>
+                `;
+                tbody.innerHTML += row;
+            });
+        }
+
+        async function loadStats() {
+            const res = await authFetch("/api/my-count");
+            if (!res) return;
+            const data = await res.json();
+            
+            document.getElementById("wallet-id-display").innerText = data.wallet_id;
+            document.getElementById("trade-count-display").innerText = data.total_trades;
+            document.getElementById("username-display").innerText = `Wallet #${data.wallet_id}`;
+        }
+
+        async function createTrade() {
+            const cryptoId = document.getElementById("cryptoSelect").value;
+            const quantity = document.getElementById("quantityInput").value;
+            const type = document.getElementById("typeSelect").value;
+
+            if (!cryptoId || !quantity) {
+                alert("Заповніть всі поля!");
+                return;
+            }
+
+            const body = {
+                crypto_id: parseInt(cryptoId),
+                quantity: parseFloat(quantity),
+                trade_type: type
+            };
+
+            try {
+                const res = await authFetch("/api/trades", {
+                    method: "POST",
+                    body: JSON.stringify(body)
+                });
+
+                if (res.ok) {
+                    alert("✅ Трейд успішно створено!");
+                    loadMyTrades(); // Оновлюємо таблицю
+                    loadStats();    // Оновлюємо лічильник
+                } else {
+                    const err = await res.json();
+                    alert("❌ Помилка: " + (err.detail || "Невідома помилка"));
+                }
+            } catch (e) {
+                console.error(e);
+                alert("Помилка з'єднання");
+            }
+        }
+    </script>
+</body>
+</html>
