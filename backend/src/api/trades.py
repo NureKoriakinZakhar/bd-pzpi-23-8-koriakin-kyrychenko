@@ -17,11 +17,7 @@ def get_cryptos(conn: pyodbc.Connection = Depends(get_db_conn)):
     return results
 
 @router.post("/trades")
-def create_trade(
-    trade: TradeCreate,
-    user_data: dict = Depends(get_current_user_data), # <-- Авторизація тут
-    conn: pyodbc.Connection = Depends(get_db_conn)
-):
+def create_trade(trade: TradeCreate,user_data: dict = Depends(get_current_user_data),conn: pyodbc.Connection = Depends(get_db_conn)):
     cursor = conn.cursor()
     try:
         # Отримуємо wallet_id автоматично з токена
@@ -45,10 +41,7 @@ def create_trade(
         raise HTTPException(500, f"DB Error: {msg}")
 
 @router.get("/my-trades", response_model=List[TradeOut])
-def get_my_trades(
-    user_data: dict = Depends(get_current_user_data),
-    conn: pyodbc.Connection = Depends(get_db_conn)
-):
+def get_my_trades(user_data: dict = Depends(get_current_user_data), conn: pyodbc.Connection = Depends(get_db_conn)):
     cursor = conn.cursor()
     wallet_id = user_data["wallet_id"]
     
@@ -61,10 +54,7 @@ def get_my_trades(
     return results
 
 @router.get("/my-count")
-def get_trade_count(
-    user_data: dict = Depends(get_current_user_data),
-    conn: pyodbc.Connection = Depends(get_db_conn)
-):
+def get_trade_count(user_data: dict = Depends(get_current_user_data), conn: pyodbc.Connection = Depends(get_db_conn)):
     cursor = conn.cursor()
     wallet_id = user_data["wallet_id"]
     

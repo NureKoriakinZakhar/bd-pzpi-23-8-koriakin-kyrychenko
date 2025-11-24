@@ -7,10 +7,7 @@ import pyodbc
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
 @router.post("/login", response_model=Token)
-def login(
-    data: LoginRequest,
-    conn: pyodbc.Connection = Depends(get_db_conn)
-):
+def login(data: LoginRequest,conn: pyodbc.Connection = Depends(get_db_conn)):
     cursor = conn.cursor()
     
     # Перевіряємо існування юзера
