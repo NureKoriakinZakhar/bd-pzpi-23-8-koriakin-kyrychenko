@@ -1,0 +1,26 @@
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+.python_env/
+.virtualenv/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# IDE / Editor
+.vscode/
+.idea/
+
+# Environment files
+.env
+.env.*
+*.env
+
+# macOS / Linux / Windows garbage
+.DS_Store
+Thumbs.db
