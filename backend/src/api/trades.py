@@ -30,15 +30,15 @@ def create_trade(trade: TradeCreate,user_data: dict = Depends(get_current_user_d
         cursor.execute(sql, params)
         conn.commit()
         return {"message": "Trade executed", "by_user": user_data["username"]}
-        
+
     except pyodbc.Error as e:
         conn.rollback()
         msg = str(e)
-        if '50001' in msg: raise HTTPException(400, "Quantity must be > 0")
-        if '50002' in msg: raise HTTPException(400, "Invalid trade type")
-        if '50003' in msg: raise HTTPException(404, "Wallet not found")
-        if '50004' in msg: raise HTTPException(404, "Crypto not found")
-        raise HTTPException(500, f"DB Error: {msg}")
+        if '50001' in msg: raise HTTPException(400, "Кількість має бути > 0")
+        if '50002' in msg: raise HTTPException(400, "Невірний тип угоди")
+        if '50003' in msg: raise HTTPException(404, "Гаманець не знайдено")
+        if '50004' in msg: raise HTTPException(404, "Криптовалюту не знайдено")
+        raise HTTPException(500, f"Помилка БД: {msg}")
 
 @router.get("/my-trades", response_model=List[TradeOut])
 def get_my_trades(user_data: dict = Depends(get_current_user_data), conn: pyodbc.Connection = Depends(get_db_conn)):

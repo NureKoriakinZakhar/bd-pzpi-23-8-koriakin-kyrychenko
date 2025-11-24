@@ -15,9 +15,11 @@ def login(data: LoginRequest,conn: pyodbc.Connection = Depends(get_db_conn)):
     user = cursor.fetchone()
     
     if not user:
-        raise HTTPException(status_code=404, detail="User ID not found")
+        raise HTTPException(status_code=404, detail="Користувача не знайдено")
     
     # Створюємо токен
     access_token = create_access_token(data={"sub": str(data.user_id)})
     
     return {"access_token": access_token, "token_type": "bearer"}
+
+
