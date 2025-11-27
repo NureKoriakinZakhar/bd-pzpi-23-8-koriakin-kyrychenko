@@ -8,7 +8,6 @@ from src.core.config import settings
 from src.db.database import get_db_conn
 import pyodbc
 
-# Це зробить просте поле "Value" у Swagger
 security_scheme = HTTPBearer()
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
@@ -22,12 +21,8 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     encoded_jwt = jwt.encode(to_encode, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
     return encoded_jwt
 
-def get_current_user_data(
-    # ЗМІНА: Отримуємо токен через HTTPBearer
-    credentials: HTTPAuthorizationCredentials = Depends(security_scheme), 
-    conn: pyodbc.Connection = Depends(get_db_conn)
-) -> dict:
-    token = credentials.credentials # Дістаємо сам рядок токена
+def get_current_user_data(credentials: HTTPAuthorizationCredentials = Depends(security_scheme), conn: pyodbc.Connection = Depends(get_db_conn)) -> dict:
+    token = credentials.credentials
     try:
         payload = jwt.decode(token, settings.JWT_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM])
         user_id_str: str = payload.get("sub")
